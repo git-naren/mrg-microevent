@@ -5,6 +5,12 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 	var EVENT = 0;
 	var PARAM = 1;
 
+	var isExtraParamsSupported = false;
+
+	window.setTimeout(function (a, b) {
+		isExtraParamsSupported = a === 1 && b === 2;
+	}, 0, 1, 2);
+
 	function isObject(anything) {
 		return Object(anything) === anything;
 	}
@@ -19,10 +25,6 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 
 	function splitBySpaces(string) {
 		return string.split(/\s+/);
-	}
-
-	function cloneArray(array) {
-		return array.splice(0);
 	}
 
 	function addListener(events, type, listener) {
@@ -88,6 +90,8 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 		if (window.setImmediate) {
 			window.setImmediate(callListeners, listeners, args);
 
+		} else if (isExtraParamsSupported) {
+			window.setTimeout(callListeners, 0, listeners, args);
 		} else {
 			window.setTimeout(function asyncCallListenersOnTimeout() {
 				callListeners(listeners, args);
@@ -154,27 +158,23 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 		var events = target[EVENTS];
 
 		if (isObject(events) && isString(types)) {
-			var i = arguments.length;
-			var args = new Array(i);
-
-			while (i--) {
-				args[i] = arguments[i];
-			}
-
 			types = splitBySpaces(types);
 
-			for (var j = 0, length = types.length; j < length; j++) {
-				var type = types[j];
+			for (var i = 0, length = types.length; i < length; i++) {
+				var type = types[i];
 				var listeners = events[type];
 
 				if (Array.isArray(listeners)) {
 					var event = new MicroEvent(type);
+					var j = arguments.length;
+					var args = new Array(j);
+
+					while (--j) {
+						args[j] = arguments[j];
+					}
 
 					event.target = target;
-
-					args = cloneArray(args);
 					args[EVENT] = event;
-
 					asyncCallListeners(listeners, args);
 				}
 			}
@@ -204,8 +204,6 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 
 			target[methodName] = EventTargetPrototype[methodName];
 		}
-
-		return target;
 	};
 
 	return EventTarget;
