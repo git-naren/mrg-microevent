@@ -2,7 +2,7 @@
   "name": "mrg-microevent",
   "author": "Jerome Etienne <jerome.etienne@gmail.com>",
   "license": "MIT",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "mrg-microevent is a library which provides the observer pattern to JavaScript objects",
   "keywords": [
     "addEventListener",
