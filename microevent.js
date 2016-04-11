@@ -3,7 +3,7 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 
 	var EVENTS = '_events';
 	var EVENT = 0;
-	var PARAM = 2;
+	var PARAM = 1;
 
 	function isObject(anything) {
 		return Object(anything) === anything;
