@@ -161,6 +161,8 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 				args[i] = arguments[i];
 			}
 
+			types = splitBySpaces(types);
+
 			for (var j = 0, length = types.length; j < length; j++) {
 				var type = types[j];
 				var listeners = events[type];
