@@ -1,6 +1,31 @@
 {
-	"name"		: "microevent",
-	"version"	: "1.0.0",
-	"description"	: "event emitter micro library (works in node+browser)",
-	"main"		: "microevent.js"
+  "name": "mrg-microevent",
+  "author": "Jerome Etienne <jerome.etienne@gmail.com>",
+  "license": "MIT",
+  "version": "0.0.1",
+  "description": "mrg-microevent is a library which provides the observer pattern to JavaScript objects",
+  "keywords": [
+    "addEventListener",
+    "bind",
+    "dispatchEvent",
+    "emit",
+    "event",
+    "eventemmiter",
+    "events",
+    "eventtarget",
+    "listener",
+    "observable",
+    "off",
+    "on",
+    "removeEventListener",
+    "unbind"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mailru/mrg-microevent.git"
+  },
+  "files": [
+    "microevent.js"
+  ],
+  "main": "microevent.js"
 }

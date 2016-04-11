@@ -1,121 +1,210 @@
-define('toolkit-common/microevent/microevent', function() {
-	/**
-	 * MicroEvent - to make any js object an event emitter (server or browser)
-	 *
-	 * - pure javascript - server compatible, browser compatible
-	 * - dont rely on the browser doms
-	 * - super simple - you get it immediatly, no mistery, no magic involved
-	 *
-	 * - create a MicroEventDebug with goodies to debug
-	 *   - make it safer to use
-	*/
-	var _slice = Array.prototype.slice;
+define('mrg-microevent', function defineMrgMicroEvent() {
+	'use strict';
 
-	var MicroEvent	= function(){};
-	MicroEvent.prototype	= {
-		bind: function(event, callback) {
-			var _this = this;
-			_this._events = _this._events || {};
+	var EVENTS = '_events';
+	var EVENT = 0;
+	var PARAM = 2;
 
-			Array.forEach(event.split(/\s+/), function(e) {
-				_this._events[e] = _this._events[e] || [];
-				_this._events[e].push(callback);
-			});
+	function isObject(anything) {
+		return Object(anything) === anything;
+	}
 
-			return _this;
-		},
+	function isString(anything) {
+		return typeof anything == 'string';
+	}
 
-		unbind: function(event, callback) {
-			var _this = this;
-			_this._events = _this._events || {};
+	function isFunction(anything) {
+		return typeof anything == 'string';
+	}
 
-			Array.forEach(event.split(/\s+/), function(e) {
-				if( e in _this._events === false  ) {
-					return;
-				}
+	function splitBySpaces(string) {
+		return string.split(/\s+/);
+	}
 
-				if(callback) {
-					var index = _this._events[e].indexOf(callback);
-					if ( index != -1 ) {
-						_this._events[e].splice(index, 1);
-					}
-				} else {
-					delete _this._events[e];
-				}
-			});
+	function cloneArray(array) {
+		return array.splice(0);
+	}
 
-			return _this;
-		},
+	function addListener(events, type, listener) {
+		var listeners = events[type];
 
-		trigger: function(event /* , args... */) {
-			var _this = this;
-			_this._events = _this._events || {};
+		if (!Array.isArray(listeners)) {
+			listeners = [];
+			events[type] = listeners;
+		}
 
-			var params = _slice.call(arguments, 1);
+		if (listeners.indexOf(listener) == -1) {
+			listeners.push(listener);
+		}
+	}
 
-			window.setTimeout(function() {
-				Array.forEach(event.split(/\s+/), function(e) {
-					if( e in _this._events === false  ) {
-						return;
-					}
+	function removeListener(events, type, listener) {
+		var listeners = events[type];
 
-					var callback, context;
+		if (Array.isArray(listeners)) {
+			var index = listeners.indexOf(listener);
 
-					for(var i = 0; i < _this._events[e].length; i++){
-						callback = _this._events[e][i];
+			if (index != -1) {
+				listeners.splice(index, 1);
+			}
+		}
+	}
 
-						if( typeof callback == "object" ) {
-							if( !("handleEvent" in callback) ) {
-								continue;
-							}
+	function callListener(listener, args) {
+		var event = args[EVENT];
+		var target = event.target;
 
-							context = callback;
-							callback = callback.handleEvent;
-						} else {
-							context = _this;
-						}
+		if (!isFunction(listener) && isObject(listener)) {
+			var handleEvent = listener.handleEvent;
 
-						callback.apply(context, [{ target: _this, type: e }].concat(params));
+			if (isFunction(handleEvent)) {
+				target = listener;
+				listener = handleEvent;
+			}
+		}
 
-					}
+		if (isObject(target) && isFunction(listener)) {
+			var argCount = args.length;
 
-				});
+			if (argCount == 1) {
+				listener.call(target, event);
 
+			} else if (argCount == 2) {
+				listener.call(target, event, args[PARAM]);
+
+			} else {
+				listener.apply(target, args);
+			}
+		}
+	}
+
+	function callListeners(listeners, args) {
+		for (var i = 0, length = listeners.length; i < length; i++) {
+			callListener(listeners[i], args);
+		}
+	}
+
+	function asyncCallListeners(listeners, args) {
+		if (window.setImmediate) {
+			window.setImmediate(callListeners, listeners, args);
+
+		} else {
+			window.setTimeout(function asyncCallListenersOnTimeout() {
+				callListeners(listeners, args);
 			}, 0);
-
-			return _this;
 		}
+	}
+
+	function MicroEvent(type) {
+		this.type = type;
+		this.target = null;
+	}
+
+	function EventTarget() {
+		this[EVENTS] = {};
+	}
+
+	var EventTargetPrototype = EventTarget.prototype;
+
+	EventTargetPrototype.bind = function on(types, listener) {
+		var target = this;
+
+		if (isString(types) && isObject(listener)) {
+			var events = target[EVENTS];
+
+			if (!isObject(events)) {
+				EventTarget.call(target);
+				events = target[EVENTS];
+			}
+
+			types = splitBySpaces(types);
+
+			for (var i = 0, length = types.length; i < length; i++) {
+				addListener(events, types[i], listener);
+			}
+		}
+
+		return target;
 	};
 
-	// alias for trigger
-	MicroEvent.prototype.on   = MicroEvent.prototype.bind;
-	MicroEvent.prototype.off  = MicroEvent.prototype.unbind;
-	MicroEvent.prototype.emit = MicroEvent.prototype.trigger;
+	EventTargetPrototype.unbind = function off(types, listener) {
+		var target = this;
+		var events = target[EVENTS];
+
+		if (isObject(events) && isString(types) && isObject(listener)) {
+			types = splitBySpaces(types);
+
+			for (var i = 0, length = types.length; i < length; i++) {
+				var type = types[i];
+
+				if (listener) {
+					removeListener(events, type, listener);
+
+				} else {
+					delete events[type];
+				}
+			}
+		}
+
+		return target;
+	};
+
+	EventTargetPrototype.trigger = function emit(types/* , args… */) {
+		var target = this;
+		var events = target[EVENTS];
+
+		if (isObject(events) && isString(types)) {
+			var i = arguments.length;
+			var args = new Array(i);
+
+			while (i--) {
+				args[i] = arguments[i];
+			}
+
+			for (var j = 0, length = types.length; j < length; j++) {
+				var type = types[j];
+				var listeners = events[type];
+
+				if (Array.isArray(listeners)) {
+					var event = new MicroEvent(type);
+
+					event.target = target;
+
+					args = cloneArray(args);
+					args[EVENT] = event;
+
+					asyncCallListeners(listeners, args);
+				}
+			}
+		}
+
+		return target;
+	};
+
+	EventTargetPrototype.on = EventTargetPrototype.bind;
+	EventTargetPrototype.off = EventTargetPrototype.unbind;
+	EventTargetPrototype.emit = EventTargetPrototype.trigger;
 
 	/**
-	 * mixin will delegate all MicroEvent.js function in the destination object
-	 *
-	 * - require('MicroEvent').mixin(Foobar) will make Foobar able to use MicroEvent
-	 *
-	 * @param {Object} destObject the object which will support MicroEvent
-	 * @param {boolean} forceToFunction use function as object - and do not touch prototype
-	*/
-	MicroEvent.mixin = function(destObject, forceToFunction) {
-		var props = ['bind', 'unbind', 'trigger', 'emit', 'on', 'off'];
-
-		if ( destObject instanceof Function && !forceToFunction ) {
-			destObject = destObject.prototype;
+	 * @param   {Object}  target
+	 * @param   {Boolean} [defineStatic]
+	 * @returns {Object}  target
+	 */
+	EventTarget.mixin = function mixin(target, defineStatic) {
+		if (target instanceof Function && !defineStatic) {
+			target = target.prototype;
 		}
 
-		for ( var i = 0 ; i < props.length ; i++ ) {
-			destObject[props[i]] = MicroEvent.prototype[props[i]];
+		var methods = ['bind', 'unbind', 'trigger', 'emit', 'on', 'off'];
+
+		for (var i = 0, length = methods.length; i < length; i++) {
+			var methodName = methods[i];
+
+			target[methodName] = EventTargetPrototype[methodName];
 		}
+
+		return target;
 	};
 
-	// export in common js
-	//if( typeof module !== "undefined" && ('exports' in module)){
-	//	module.exports	= MicroEvent;
-	//}
-
-	return MicroEvent;
+	return EventTarget;
 });
