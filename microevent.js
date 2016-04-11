@@ -14,7 +14,7 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 	}
 
 	function isFunction(anything) {
-		return typeof anything == 'string';
+		return typeof anything == 'function';
 	}
 
 	function splitBySpaces(string) {
