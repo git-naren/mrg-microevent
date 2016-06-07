@@ -6,6 +6,7 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 	var PARAM = 1;
 
 	var isExtraParamsSupported = false;
+	var hasNativeSetImmediate = (/\[native code\]/).test(window.setImmediate);
 
 	window.setTimeout(function (a, b) {
 		isExtraParamsSupported = a === 1 && b === 2;
@@ -87,7 +88,7 @@ define('mrg-microevent', function defineMrgMicroEvent() {
 	}
 
 	function asyncCallListeners(listeners, args) {
-		if (window.setImmediate) {
+		if (hasNativeSetImmediate) {
 			window.setImmediate(callListeners, listeners, args);
 
 		} else if (isExtraParamsSupported) {
